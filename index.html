@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Temporary Speed Restrictions</title>
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="icon" type="image/png" href="apple-touch-icon.png">
 <style>
 :root{
   --ink:#172033;--muted:#667085;--line:#9aa4b2;--soft:#f4f6f8;--panel:#fff;
@@ -34,6 +33,11 @@ button,input{font:inherit} button{cursor:pointer} button:disabled{cursor:not-all
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;padding:20px;z-index:50}.modal{width:min(660px,100%);background:#fff;border-radius:14px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.25)}.modal h2{margin:0 0 8px}.modal p{color:var(--muted)}.modal label{display:block;font-weight:800;margin:12px 0 6px}.modal input{width:100%;height:42px;border:1px solid #98a2b3;border-radius:7px;padding:0 10px}.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}.danger{background:#b42318;color:#fff;border:0;border-radius:8px;padding:9px 13px;font-weight:800}.secondary{background:#fff;color:var(--ink);border:1px solid #98a2b3;border-radius:8px;padding:9px 13px;font-weight:800}.sqlbox{background:#101828;color:#fff;padding:10px;border-radius:7px;white-space:pre-wrap;font-family:Consolas,monospace;font-size:12px;max-height:220px;overflow:auto}
 @media(max-width:1100px){.topbar{align-items:flex-start;flex-direction:column}.meta-grid{grid-template-columns:120px 1fr 90px 1fr}.meta-grid .wide-label{grid-column:auto}.workflow{width:100%}}
 @media(max-width:650px){.app{padding:10px}.brand{font-size:19px}.session{gap:10px;flex-direction:column;align-items:flex-start}.flow{min-width:96px}}
+
+.dup-op-btn{display:block;margin:3px auto 0;padding:2px 6px;border:1px solid #8a6500;border-radius:4px;background:#d89b18;color:#172033;font-size:9px;font-weight:700;line-height:1.15;cursor:pointer}
+.dup-op-btn:hover{filter:brightness(.96)}
+.dup-op-btn:disabled{opacity:.45;cursor:not-allowed}
+
 </style>
 </head>
 <body>
@@ -145,8 +149,26 @@ function api(table, options={}){
 $('loginForm').addEventListener('submit',async e=>{e.preventDefault();const name=$('userName').value.trim();if(!name){$('loginError').textContent='Please enter a user name.';return}session={user:name,started:new Date(),filename:`${fileDateTime(new Date())}_${safeName(name)}_TSR`};$('sessionUser').textContent=name;$('sessionTime').textContent=displayDateTime(session.started);$('sessionFile').textContent=session.filename;$('loginPage').classList.add('hidden');$('appPage').classList.remove('hidden');await loadShared(true);renderAll();});
 
 function gridHeader(){return ['Identity','Track','KP Start','KP End','Type','Speed','Row','','Head Code','NID ID','Direction','Time','NID LRBG','NID TSR','D_TSR','L_TSR','V_TSR','Checked'].map((h,i)=>`<div class="cell ${i===7?'sep':'head'}">${esc(h)}</div>`).join('')}
-function renderGrid(){let h=gridHeader();for(let i=0;i<rowCount;i++){const alt=i%2?' row-alt':'';const s=shared[i]||{slot:i+1};const o=operations[i]||blankOperation();SHARED_FIELDS.forEach(f=>{h+=`<div class="cell shared${alt}${completed?' locked':''}"><input type="text" data-shared="${f}" data-row="${i}" value="${esc(s[f]||'')}" ${completed?'disabled':''}></div>`});h+=`<div class="cell row-actions${alt}"><button class="row-action insert" type="button" data-insert="${i}" ${completed?'disabled':''}>Ins</button><button class="row-action delete" type="button" data-delete="${i}" ${completed?'disabled':''}>Del</button></div>`;h+=`<div class="cell sep"></div>`;OP_FIELDS.forEach(f=>{const type=f==='time'?'time':'text';h+=`<div class="cell op${alt}${completed?' locked':''}" data-opcell="${f}" data-row="${i}"><input type="${type}" data-op="${f}" data-row="${i}" value="${esc(o[f]||'')}" ${completed?'disabled':''}></div>`});h+=`<div class="cell checked-cell${alt}${completed?' locked':''}" data-checkcell="1" data-row="${i}"><input type="checkbox" data-check="1" data-row="${i}" ${o.checked?'checked':''} ${completed?'disabled':''}></div>`;} $('tsrGrid').innerHTML=h;wireGrid();}
-function wireGrid(){document.querySelectorAll('[data-shared]').forEach(inp=>inp.addEventListener('input',()=>{shared[+inp.dataset.row][inp.dataset.shared]=inp.value;scheduleSharedSave();updateButtons();}));document.querySelectorAll('[data-op]').forEach(inp=>inp.addEventListener('input',()=>{operations[+inp.dataset.row][inp.dataset.op]=inp.value;clearValidation();updateButtons();}));document.querySelectorAll('[data-check]').forEach(inp=>inp.addEventListener('change',()=>{operations[+inp.dataset.row].checked=inp.checked;clearValidation();updateButtons();}));document.querySelectorAll('[data-insert]').forEach(btn=>btn.addEventListener('click',()=>insertSharedRow(+btn.dataset.insert)));document.querySelectorAll('[data-delete]').forEach(btn=>btn.addEventListener('click',()=>deleteSharedRow(+btn.dataset.delete)));}
+function renderGrid(){let h=gridHeader();for(let i=0;i<rowCount;i++){const alt=i%2?' row-alt':'';const s=shared[i]||{slot:i+1};const o=operations[i]||blankOperation();SHARED_FIELDS.forEach(f=>{h+=`<div class="cell shared${alt}${completed?' locked':''}"><input type="text" data-shared="${f}" data-row="${i}" value="${esc(s[f]||'')}" ${completed?'disabled':''}></div>`});h+=`<div class="cell row-actions${alt}"><button class="row-action insert" type="button" data-insert="${i}" ${completed?'disabled':''}>Ins</button><button class="row-action delete" type="button" data-delete="${i}" ${completed?'disabled':''}>Del</button></div>`;h+=`<div class="cell sep"></div>`;OP_FIELDS.forEach(f=>{const type=f==='time'?'time':'text';const dup=f==='head_code'?`<button class="dup-op-btn" type="button" data-dup-op="${i}" ${completed?'disabled':''}>DUP ↓</button>`:'';h+=`<div class="cell op${alt}${completed?' locked':''}" data-opcell="${f}" data-row="${i}"><input type="${type}" data-op="${f}" data-row="${i}" value="${esc(o[f]||'')}" ${completed?'disabled':''}>${dup}</div>`});h+=`<div class="cell checked-cell${alt}${completed?' locked':''}" data-checkcell="1" data-row="${i}"><input type="checkbox" data-check="1" data-row="${i}" ${o.checked?'checked':''} ${completed?'disabled':''}></div>`;} $('tsrGrid').innerHTML=h;wireGrid();}
+function wireGrid(){document.querySelectorAll('[data-shared]').forEach(inp=>inp.addEventListener('input',()=>{shared[+inp.dataset.row][inp.dataset.shared]=inp.value;scheduleSharedSave();updateButtons();}));document.querySelectorAll('[data-op]').forEach(inp=>inp.addEventListener('input',()=>{operations[+inp.dataset.row][inp.dataset.op]=inp.value;clearValidation();updateButtons();}));document.querySelectorAll('[data-check]').forEach(inp=>inp.addEventListener('change',()=>{operations[+inp.dataset.row].checked=inp.checked;clearValidation();updateButtons();}));document.querySelectorAll('[data-insert]').forEach(btn=>btn.addEventListener('click',()=>insertSharedRow(+btn.dataset.insert)));document.querySelectorAll('[data-delete]').forEach(btn=>btn.addEventListener('click',()=>deleteSharedRow(+btn.dataset.delete)));document.querySelectorAll('[data-dup-op]').forEach(btn=>btn.addEventListener('click',()=>duplicateCommonOpFields(+btn.dataset.dupOp)));}
+const DUPLICATE_OP_FIELDS=['head_code','nid_id','direction','time','nid_lrbg'];
+function duplicateCommonOpFields(index){
+  if(completed)return;
+  const target=index+1;
+  if(target>=rowCount){
+    rowCount++;
+    shared.push({slot:rowCount});
+    operations.push(blankOperation());
+  }
+  const source=operations[index]||blankOperation();
+  const dest=operations[target]||blankOperation();
+  DUPLICATE_OP_FIELDS.forEach(f=>dest[f]=source[f]||'');
+  operations[target]=dest;
+  clearValidation();
+  renderGrid();
+  updateButtons();
+  setTimeout(()=>document.querySelector(`[data-op="head_code"][data-row="${target}"]`)?.focus(),0);
+}
 function normaliseSlots(){shared.forEach((r,i)=>r.slot=i+1)}
 function insertSharedRow(index){if(completed)return;const lastActive=isActiveRow(rowCount-1);if(lastActive){rowCount++;shared.push({slot:rowCount});operations.push(blankOperation())}shared.splice(index,0,{slot:index+1});operations.splice(index,0,blankOperation());shared=shared.slice(0,rowCount);operations=operations.slice(0,rowCount);normaliseSlots();clearValidation();renderGrid();updateButtons();setTimeout(()=>document.querySelector(`[data-shared="identity"][data-row="${index}"]`)?.focus(),0)}
 function deleteSharedRow(index){if(completed)return;const blank=!isActiveRow(index);showConfirm(blank?'Delete Blank Line':'Delete TSR',blank?'Remove this blank line and move the following lines up?':'Delete this TSR line and move the following TSRs up?','Delete',async()=>{shared.splice(index,1);operations.splice(index,1);rowCount=Math.max(MIN_ROWS,rowCount-1);shared=shared.slice(0,rowCount);operations=operations.slice(0,rowCount);while(shared.length<rowCount)shared.push({slot:shared.length+1});while(operations.length<rowCount)operations.push(blankOperation());normaliseSlots();clearValidation();renderGrid();await saveShared();updateButtons()})}
