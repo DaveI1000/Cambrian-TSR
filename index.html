@@ -126,7 +126,9 @@ const SEED = [
 const DEFAULT_META = {version:'10:57:24', list_date:'2026-08-28', updated_on:null, updated_by:''};
 let session=null, shared=SEED.map((r,i)=>({slot:i+1,...r})), meta={...DEFAULT_META};
 let operations=blankOperations(), completed=false, emailed=false, archived=false, archives=[];
-let db={url:localStorage.getItem('tsr_supabase_url')||'', key:localStorage.getItem('tsr_supabase_key')||''};
+const FIXED_DB_URL='https://neyiejzhckvumtxgvepv.supabase.co';
+const FIXED_DB_KEY='sb_publishable_u4qZJ-Wk90M6kpvUj-sPIA_GW6uppH1';
+let db={url:FIXED_DB_URL,key:FIXED_DB_KEY};
 let sharedSaveTimer=null, metaSaveTimer=null, chosenDirectory=null;
 
 const $=id=>document.getElementById(id);
@@ -197,7 +199,7 @@ async function saveMeta(fromShared=false){if(!dbConfigured()||!session)return;tr
 function setDbStatus(ok,title,detail){$('dbNotice').classList.toggle('good',ok);$('dbNotice').classList.toggle('bad',!ok);$('dbStatus').textContent=title;$('dbDetail').textContent=detail}
 
 $('dbSetupBtn').addEventListener('click',()=>showDbSetup());
-function showDbSetup(){const sql=`Run the supplied supabase_setup.sql file in Supabase SQL Editor first.`;showModal(`<h2>Database Setup</h2><p>Enter the Supabase Project URL and the publishable/anon key. These are saved only in this browser.</p><label>Project URL</label><input id="modalUrl" value="${esc(db.url)}" placeholder="https://xxxxx.supabase.co"><label>Publishable / anon key</label><input id="modalKey" value="${esc(db.key)}" placeholder="eyJ..."><p>${sql}</p><div class="modal-actions"><button class="secondary" data-close>Cancel</button><button class="primary" id="saveDbSetup">Save & Connect</button></div>`,()=>{$('saveDbSetup').addEventListener('click',async()=>{db.url=$('modalUrl').value.trim();db.key=$('modalKey').value.trim();localStorage.setItem('tsr_supabase_url',db.url);localStorage.setItem('tsr_supabase_key',db.key);closeModal();await loadShared(true);renderAll();})})}
+function showDbSetup(){const sql=`Run the supplied supabase_setup.sql file in Supabase SQL Editor first.`;showModal(`<h2>Database Setup</h2><p>Enter the Supabase Project URL and the publishable/anon key. These are saved only in this browser.</p><label>Project URL</label><input id="modalUrl" value="${esc(db.url)}" placeholder="https://xxxxx.supabase.co"><label>Publishable / anon key</label><input id="modalKey" value="${esc(db.key)}" placeholder="eyJ..."><p>${sql}</p><div class="modal-actions"><button class="secondary" data-close>Cancel</button><button class="primary" id="saveDbSetup">Save & Connect</button></div>`,()=>{$('saveDbSetup').addEventListener('click',async()=>{db.url=FIXED_DB_URL;db.key=FIXED_DB_KEY;closeModal();await loadShared(true);renderAll();})})}
 function showConfirm(title,text,confirmText,onConfirm){showModal(`<h2>${esc(title)}</h2><p>${esc(text)}</p><div class="modal-actions"><button class="secondary" data-close>Cancel</button><button class="danger" id="confirmAction">${esc(confirmText)}</button></div>`,()=>{$('confirmAction').addEventListener('click',async()=>{closeModal();await onConfirm()})})}
 function showModal(content,after){$('modalBackdrop').innerHTML=`<div class="modal">${content}</div>`;$('modalBackdrop').classList.remove('hidden');$('modalBackdrop').querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',closeModal));if(after)after()}
 function closeModal(){$('modalBackdrop').classList.add('hidden');$('modalBackdrop').innerHTML=''}
